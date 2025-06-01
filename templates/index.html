@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dystopian Story Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-4">
+    </div>
+  <div id="characterSetup" class="p-4 space-y-2 bg-gray-900 text-white">
+    <label>Race:
+      <select id="race" class="text-black p-1 rounded">
+        <option value="elf">Elf</option>
+        <option value="dwarf">Dwarf</option>
+        <option value="human">Human</option>
+        <option value="orc">Orc</option>
+        <option value="tiefling">Tiefling</option>
+        <option value="halfling">Halfling</option>
+      </select>
+    </label>
+    <label>Class:
+      <select id="class" class="text-black p-1 rounded">
+        <option value="warrior">Warrior</option>
+        <option value="mage">Mage</option>
+        <option value="rogue">Rogue</option>
+        <option value="ranger">Ranger</option>
+        <option value="monk">Monk</option>
+
+      </select>
+    </label>
+    <label>Alignment:
+      <select id="alignment" class="text-black p-1 rounded">
+        <option value="lawful good">Lawful Good</option>
+        <option value="lawful neutral">Lawful Neutral</option>
+        <option value="lawful evil">Lawful Evil</option>
+        <option value="chaotic good">Chaotic Good</option>
+        <option value="chaotic neutral">Chaotic Neutral</option>
+        <option value="chaotic evil">Chaotic Evil</option>
+        <option value="neutral good">Neutral Good</option>
+        <option value="True neutral">True Neutral</option>
+        <option value="neutral evil">Neutral Evil</option>
+      </select>
+    </label>
+    <label>Starting Map:
+      <select id="map" class="text-black p-1 rounded">
+        <option value="ancient forest">Ancient Forest</option>
+        <option value="desert ruins">Desert Ruins</option>
+        <option value="mountain citadel">Mountain Citadel</option>
+        <option value="busy capital city">Busy Capital City</option>
+        <option value="icey temple">Icey Temple</option>
+        <option value="dark cave">Dark Cave</option>
+      </select>
+    </label>
+    <button id="startBtn" class="bg-green-600 hover:bg-green-700 px-4 py-1 rounded font-semibold">Start Adventure</button>
+  </div>
+
+
+  
+  <form id="inputForm" class="p-4 flex bg-gray-800">
+    <input id="inputBox" type="text" placeholder="What will you do next?" class="flex-1 rounded-l-lg p-2 text-gray-900 focus:outline-none" autocomplete="off" required/>
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 text-white font-semibold">Send</button>
+  </form>
+
+
+
+<script>
+  let stateId = null;
+
+  function appendMessage(text, sender) {
+    const chat = document.getElementById('chat');
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('max-w-md', 'p-2', 'rounded-lg');
+
+    if (sender === 'user') {
+      msgDiv.classList.add('bg-blue-500', 'self-end', 'text-white', 'ml-auto');
+    } else {
+      msgDiv.classList.add('bg-gray-700', 'self-start', 'text-gray-100', 'mr-auto');
+    }
+
+    msgDiv.innerText = text;
+    chat.appendChild(msgDiv);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  document.getElementById("startBtn").addEventListener("click", async () => {
+    const race = document.getElementById("race").value;
+    const cls = document.getElementById("class").value;
+    const alignment = document.getElementById("alignment").value;
+    const map = document.getElementById("map").value;
+
+    try {
+      const res = await fetch("/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ race, class: cls, alignment, map }),
+      });
+
+      const data = await res.json();
+      stateId = data.state_id;
+      appendMessage(data.current_scene, "narrator");
+
+      document.getElementById("characterSetup").style.display = "none";
+      document.getElementById("inputForm").style.display = "flex";
+    } catch (err) {
+      appendMessage("Failed to start story.", "narrator");
+    }
+  });
+
+  window.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("inputForm").style.display = "none";
+  });
+
+  document.getElementById('inputForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inputBox = document.getElementById('inputBox');
+    const userText = inputBox.value.trim();
+    if (!userText) return;
+
+    appendMessage(userText, 'user');
+    inputBox.value = '';
+
+    try {
+      const res = await fetch('/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state_id: stateId, user_input: userText })
+      });
+      const result = await res.json();
+      appendMessage(result.scene, 'narrator');
+    } catch (err) {
+      appendMessage('The narrator is silent...', 'narrator');
+    }
+  });
+</script>
+
+</body>
+
+
+</html>
